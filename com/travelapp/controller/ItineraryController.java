@@ -3,7 +3,7 @@ package com.travelapp.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import com.travelapp.model.Itinerary;
-import com.travelapp.repository.ItineraryRepository;
+import com.travelapp.service.ItineraryService;
 
 import java.util.List;
 
@@ -11,36 +11,30 @@ import java.util.List;
 @RequestMapping("/api/itineraries")
 public class ItineraryController {
     @Autowired
-    private ItineraryRepository itineraryRepository;
+    private ItineraryService itineraryService;
 
     @GetMapping
     public List<Itinerary> getAllItineraries() {
-        return itineraryRepository.findAll();
+        return itineraryService.getAllItineraries();
     }
 
     @PostMapping
     public Itinerary createItinerary(@RequestBody Itinerary itinerary) {
-        return itineraryRepository.save(itinerary);
+        return itineraryService.createItinerary(itinerary);
     }
 
     @GetMapping("/{id}")
     public Itinerary getItineraryById(@PathVariable Long id) {
-        return itineraryRepository.findById(id).orElseThrow(() -> new RuntimeException("Itinerary not found"));
+        return itineraryService.getItineraryById(id);
     }
 
     @PutMapping("/{id}")
     public Itinerary updateItinerary(@PathVariable Long id, @RequestBody Itinerary itineraryDetails) {
-        Itinerary itinerary = itineraryRepository.findById(id).orElseThrow(() -> new RuntimeException("Itinerary not found"));
-        itinerary.setDestination(itineraryDetails.getDestination());
-        itinerary.setStartDate(itineraryDetails.getStartDate());
-        itinerary.setEndDate(itineraryDetails.getEndDate());
-        itinerary.setDetails(itineraryDetails.getDetails());
-        return itineraryRepository.save(itinerary);
+        return itineraryService.updateItinerary(id, itineraryDetails);
     }
 
     @DeleteMapping("/{id}")
     public void deleteItinerary(@PathVariable Long id) {
-        Itinerary itinerary = itineraryRepository.findById(id).orElseThrow(() -> new RuntimeException("Itinerary not found"));
-        itineraryRepository.delete(itinerary);
+        itineraryService.deleteItinerary(id);
     }
 }

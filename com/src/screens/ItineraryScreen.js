@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
+import { View, FlatList, Alert, StyleSheet, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import InputField from '../components/InputField';
+import Button from '../components/Button';
+import Header from '../components/Header';
 
-const ItineraryScreen = () => {
+const ItineraryScreen = ({ navigation }) => {
     const [itineraries, setItineraries] = useState([]);
     const [destination, setDestination] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [details, setDetails] = useState('');
+    const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
     useEffect(() => {
@@ -15,75 +17,142 @@ const ItineraryScreen = () => {
     }, []);
 
     const fetchItineraries = async () => {
+        setLoading(true);
         try {
-            const response = await axios.get('http://localhost:8080/api/itineraries');
+            const token = await AsyncStorage.getItem('token');
+            const response = await axios.get('http://localhost:8080/api/itineraries', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             setItineraries(response.data);
         } catch (error) {
-            Alert.alert('Error', 'Failed to fetch itineraries.');
-            console.error('Error fetching itineraries:', error);
+            Alert.alert('Error', 'Failed to fetch itineraries');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleSaveItinerary = async () => {
+    const handleSave = async () => {
+        if (!destination) {
+            Alert.alert('Error', 'Destination cannot be empty');
+            return;
+        }
+
+        setLoading(true);
         try {
-            const itinerary = { destination, startDate, endDate, details };
+            const token = await AsyncStorage.getItem('token');
             if (editingId) {
-                await axios.put(`http://localhost:8080/api/itineraries/${editingId}`, itinerary);
-                setEditingId(null);
+                await axios.put(`http://localhost:8080/api/itineraries/${editingId}`, { destination }, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
             } else {
-                await axios.post('http://localhost:8080/api/itineraries', itinerary);
+                await axios.post('http://localhost:8080/api/itineraries', { destination }, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
             }
             setDestination('');
-            setStartDate('');
-            setEndDate('');
-            setDetails('');
+            setEditingId(null);
             fetchItineraries();
         } catch (error) {
-            Alert.alert('Error', 'Failed to save itinerary.');
-            console.error('Error saving itinerary:', error);
+            Alert.alert('Error', 'Failed to save itinerary');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleDeleteItinerary = async (id) => {
+    const handleDelete = async (id) => {
+        setLoading(true);
         try {
-            await axios.delete(`http://localhost:8080/api/itineraries/${id}`);
+            const token = await AsyncStorage.getItem('token');
+            await axios.delete(`http://localhost:8080/api/itineraries/${id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             fetchItineraries();
         } catch (error) {
-            Alert.alert('Error', 'Failed to delete itinerary.');
-            console.error('Error deleting itinerary:', error);
+            Alert.alert('Error', 'Failed to delete itinerary');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleEditItinerary = (item) => {
-        setEditingId(item.id);
-        setDestination(item.destination);
-        setStartDate(item.startDate);
-        setEndDate(item.endDate);
-        setDetails(item.details);
+    const handleLogout = async () => {
+        await AsyncStorage.removeItem('token');
+        Alert.alert('Logged Out', 'You have been logged out successfully.');
+        navigation.replace('Auth');
     };
 
     return (
-        <View>
-            <Text>Itinerary Management</Text>
-            <TextInput placeholder="Destination" value={destination} onChangeText={setDestination} />
-            <TextInput placeholder="Start Date (YYYY-MM-DD)" value={startDate} onChangeText={setStartDate} />
-            <TextInput placeholder="End Date (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} />
-            <TextInput placeholder="Details" value={details} onChangeText={setDetails} />
-            <Button title={editingId ? "Update Itinerary" : "Add Itinerary"} onPress={handleSaveItinerary} />
-            <FlatList
-                data={itineraries}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                    <View>
-                        <Text>{item.destination} ({item.startDate} - {item.endDate})</Text>
-                        <Text>{item.details}</Text>
-                        <Button title="Edit" onPress={() => handleEditItinerary(item)} />
-                        <Button title="Delete" onPress={() => handleDeleteItinerary(item.id)} />
-                    </View>
-                )}
-            />
+        <View style={styles.container}>
+            {/* Header with Profile and Logout */}
+            <Header title="Itinerary" onProfilePress={() => navigation.navigate('Profile')} onLogoutPress={handleLogout} />
+
+            {/* Input for New Itinerary */}
+            <InputField placeholder="Enter Destination" value={destination} onChangeText={setDestination} />
+            <Button title={editingId ? "Update Itinerary" : "Add Itinerary"} onPress={handleSave} loading={loading} />
+
+            {/* Itinerary List */}
+            {loading ? <ActivityIndicator size="large" color="#007bff" /> : (
+                <FlatList
+                    data={itineraries}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={({ item }) => (
+                        <View style={styles.card}>
+                            <Text style={styles.cardText}>{item.destination}</Text>
+                            <View style={styles.cardButtons}>
+                                <TouchableOpacity style={styles.editButton} onPress={() => {
+                                    setDestination(item.destination);
+                                    setEditingId(item.id);
+                                }}>
+                                    <Text style={styles.buttonText}>Edit</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item.id)}>
+                                    <Text style={styles.buttonText}>Delete</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+                />
+            )}
         </View>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        padding: 20,
+        backgroundColor: '#f8f9fa',
+    },
+    card: {
+        padding: 15,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        marginBottom: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    cardText: {
+        fontSize: 16,
+    },
+    cardButtons: {
+        flexDirection: 'row',
+    },
+    editButton: {
+        backgroundColor: '#28a745',
+        padding: 8,
+        borderRadius: 5,
+        marginRight: 5,
+    },
+    deleteButton: {
+        backgroundColor: '#dc3545',
+        padding: 8,
+        borderRadius: 5,
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+});
 
 export default ItineraryScreen;

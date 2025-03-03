@@ -1,75 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, ActivityIndicator } from 'react-native';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { View, Alert, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Toast from 'react-native-toast-message';
+import axios from 'axios';
+import InputField from '../components/InputField';
+import Button from '../components/Button';
 
-const ItineraryScreen = ({ navigation }) => {
-    const [itineraries, setItineraries] = useState([]);
-    const [destination, setDestination] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [details, setDetails] = useState('');
-    const [editingId, setEditingId] = useState(null);
+const AuthScreen = ({ navigation }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        fetchItineraries();
-    }, []);
-
-    const fetchItineraries = async () => {
-        setLoading(true);
-        try {
-            const token = await AsyncStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/api/itineraries', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setItineraries(response.data);
-        } catch (error) {
-            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to fetch itineraries. Please login.' });
-            navigation.navigate('Auth');
-        } finally {
-            setLoading(false);
+    const handleLogin = async () => {
+        if (!email || !password) {
+            Alert.alert('Error', 'Please enter both email and password');
+            return;
         }
-    };
 
-    const handleSaveItinerary = async () => {
         setLoading(true);
         try {
-            const token = await AsyncStorage.getItem('token');
-            const itinerary = { destination, startDate, endDate, details };
-            const config = { headers: { Authorization: `Bearer ${token}` } };
-            if (editingId) {
-                await axios.put(`http://localhost:8080/api/itineraries/${editingId}`, itinerary, config);
-                setEditingId(null);
-                Toast.show({ type: 'success', text1: 'Success', text2: 'Itinerary updated successfully.' });
-            } else {
-                await axios.post('http://localhost:8080/api/itineraries', itinerary, config);
-                Toast.show({ type: 'success', text1: 'Success', text2: 'Itinerary added successfully.' });
-            }
-            setDestination('');
-            setStartDate('');
-            setEndDate('');
-            setDetails('');
-            fetchItineraries();
+            const response = await axios.post('http://localhost:8080/api/auth/login', { email, password });
+            await AsyncStorage.setItem('token', response.data.token);
+            Alert.alert('Success', 'Login successful!');
+            navigation.replace('Itinerary');
         } catch (error) {
-            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to save itinerary. Please login.' });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDeleteItinerary = async (id) => {
-        setLoading(true);
-        try {
-            const token = await AsyncStorage.getItem('token');
-            await axios.delete(`http://localhost:8080/api/itineraries/${id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            fetchItineraries();
-            Toast.show({ type: 'success', text1: 'Deleted', text2: 'Itinerary deleted successfully.' });
-        } catch (error) {
-            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to delete itinerary. Please login.' });
+            Alert.alert('Error', 'Invalid credentials');
         } finally {
             setLoading(false);
         }
@@ -77,31 +31,21 @@ const ItineraryScreen = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Itinerary Management</Text>
-            {loading && <ActivityIndicator size="large" color="#007BFF" />}
-            <TextInput style={styles.input} placeholder="Destination" value={destination} onChangeText={setDestination} />
-            <TextInput style={styles.input} placeholder="Start Date (YYYY-MM-DD)" value={startDate} onChangeText={setStartDate} />
-            <TextInput style={styles.input} placeholder="End Date (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} />
-            <TextInput style={styles.input} placeholder="Details" value={details} onChangeText={setDetails} />
-            <TouchableOpacity style={styles.button} onPress={handleSaveItinerary} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{editingId ? "Update Itinerary" : "Add Itinerary"}</Text>}
-            </TouchableOpacity>
-            <FlatList
-                data={itineraries}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                    <View style={styles.itemContainer}>
-                        <Text style={styles.itemTitle}>{item.destination} ({item.startDate} - {item.endDate})</Text>
-                        <Text>{item.details}</Text>
-                        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteItinerary(item.id)} disabled={loading}>
-                            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Delete</Text>}
-                        </TouchableOpacity>
-                    </View>
-                )}
-            />
-            <Toast />
+            <InputField placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
+            <InputField placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+            <Button title="Login" onPress={handleLogin} loading={loading} />
         </View>
     );
 };
 
-export default ItineraryScreen;
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8f9fa',
+        padding: 20,
+    },
+});
+
+export default AuthScreen;
