@@ -1,6 +1,7 @@
 package travelplanner.controller;
 
-import travelplanner.model.User;
+import travelplanner.dto.UserLoginDTO;
+import travelplanner.dto.UserRegisterDTO;
 import travelplanner.service.AuthService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -13,7 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}) // ✅ Allow multiple origins
 public class AuthController {
 
     private final AuthService authService;
@@ -25,33 +26,38 @@ public class AuthController {
 
     /**
      * Registers a new user.
-     * @param user User registration details.
+     * @param userRegisterDTO User registration details.
      * @return ResponseEntity with success or failure message.
      */
     @PostMapping(value = "/register", consumes = "application/json")
-    public ResponseEntity<?> register(@RequestBody @Valid User user) {
-        logger.info("Registering new user: {}", user.getEmail());
+    public ResponseEntity<?> register(@RequestBody @Valid UserRegisterDTO userRegisterDTO) {
+        logger.info("Registering new user: {}", userRegisterDTO.getEmail());
         try {
-            String response = authService.registerUser(user.getFirstName(), user.getLastName(), user.getEmail(), user.getPassword());
+            String response = authService.registerUser(
+                    userRegisterDTO.getFirstName(),
+                    userRegisterDTO.getLastName(),
+                    userRegisterDTO.getEmail(),
+                    userRegisterDTO.getPassword()
+            );
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", response));
-        } catch (RuntimeException e) {
-            logger.error("Error during registration: {}", e.getMessage());
+        } catch (Exception e) {
+            logger.error("Error during registration: ", e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
      * Authenticates a user and issues a JWT token.
-     * @param user User login details.
+     * @param userLoginDTO User login details.
      * @return ResponseEntity with JWT token or error message.
      */
     @PostMapping(value = "/login", consumes = "application/json")
-    public ResponseEntity<?> login(@RequestBody @Valid User user) {
-        logger.info("Attempting login for: {}", user.getEmail());
+    public ResponseEntity<?> login(@RequestBody @Valid UserLoginDTO userLoginDTO) {
+        logger.info("Attempting login for: {}", userLoginDTO.getEmail());
         try {
-            String token = authService.loginUser(user.getEmail(), user.getPassword());
+            String token = authService.loginUser(userLoginDTO.getEmail(), userLoginDTO.getPassword());
             return ResponseEntity.ok(Map.of("token", token));
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             logger.warn("Failed login attempt: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         }
@@ -68,7 +74,7 @@ public class AuthController {
         try {
             String response = authService.verifyUser(email);
             return ResponseEntity.ok(Map.of("message", response));
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             logger.error("Email verification error: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

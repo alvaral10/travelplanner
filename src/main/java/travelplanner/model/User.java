@@ -12,96 +12,111 @@ public class User {
     private Long id;
 
     @Column(nullable = false)
-    private String firstName;  // User's first name
+    private String firstName;
 
     @Column(nullable = false)
-    private String lastName;  // User's last name
+    private String lastName;
 
     @Column(nullable = false, unique = true)
-    private String email;  // Unique email for authentication
+    private String email;
 
     @Column(nullable = false)
-    private String password;  // Encrypted password
+    private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;  // User role: "ROLE_USER", "ROLE_ADMIN", etc.
+    private Role role;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;  // Timestamp for account creation
+    private LocalDateTime createdAt;
 
     @Column(nullable = false)
-    private LocalDateTime updatedAt;  // Timestamp for last profile update
+    private LocalDateTime updatedAt;
 
     @Column(nullable = false)
-    private boolean isEnabled = true;  // Account status (default: enabled)
+    private boolean isEnabled = true;
 
     @Column(nullable = false)
-    private boolean isVerified = false;  // Email verification status (default: not verified)
+    private boolean isVerified = false;
 
-    // Default constructor (required by JPA)
+    // ✅ Default constructor (JPA requirement)
     public User() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        setCreatedAt(LocalDateTime.now());
+        setUpdatedAt(LocalDateTime.now());
     }
 
-    // Constructor with parameters
+    // ✅ Constructor with parameters
     public User(String firstName, String lastName, String email, String password, Role role) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.password = password;
         this.role = role;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        setCreatedAt(LocalDateTime.now());
+        setUpdatedAt(LocalDateTime.now());
     }
 
-    // Getters and Setters
+    // ✅ Getters
     public Long getId() { return id; }
-
-    public void setId(Long id) { this.id = id; }
-
     public String getFirstName() { return firstName; }
-
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-
     public String getLastName() { return lastName; }
-
-    public void setLastName(String lastName) { this.lastName = lastName; }
-
     public String getEmail() { return email; }
-
-    public void setEmail(String email) { this.email = email; }
-
     public String getPassword() { return password; }
-
-    public void setPassword(String password) { this.password = password; }
-
     public Role getRole() { return role; }
-
-    public void setRole(Role role) { this.role = role; }
-
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public boolean isEnabled() { return isEnabled; }
+    public boolean isVerified() { return isVerified; }
+
+    // ✅ Setters with automatic timestamp update
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+        setUpdatedAt(LocalDateTime.now());
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+        setUpdatedAt(LocalDateTime.now());
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+        setUpdatedAt(LocalDateTime.now());
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+        setUpdatedAt(LocalDateTime.now());
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+        setUpdatedAt(LocalDateTime.now());
+    }
+
+    public void setEnabled(boolean enabled) {
+        isEnabled = enabled;
+        setUpdatedAt(LocalDateTime.now());
+    }
+
+    public void setVerified(boolean verified) {
+        isVerified = verified;
+        setUpdatedAt(LocalDateTime.now());
+    }
 
     /**
-     * Sets the createdAt timestamp, ensuring it is only set once.
-     * @param createdAt The timestamp to set.
+     * ✅ Sets the createdAt timestamp **only once** when the user is first created.
      */
     public void setCreatedAt(LocalDateTime createdAt) {
-        if (this.createdAt == null) {  // Ensure createdAt is only set once
+        if (this.createdAt == null) {  // Ensure it is set only once
             this.createdAt = createdAt;
         }
     }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    public boolean isEnabled() { return isEnabled; }
-
-    public void setEnabled(boolean enabled) { isEnabled = enabled; }
-
-    public boolean isVerified() { return isVerified; }
-
-    public void setVerified(boolean verified) { isVerified = verified; }
+    /**
+     * ✅ Updates the `updatedAt` field **whenever changes are made**.
+     */
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

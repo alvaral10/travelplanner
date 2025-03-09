@@ -11,7 +11,7 @@ import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/itineraries';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const ItineraryScreen = () => {
     const [itineraries, setItineraries] = useState([]);
@@ -26,8 +26,9 @@ const ItineraryScreen = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(API_URL, { headers: { Authorization: `Bearer ${token}` } });
-            setItineraries(response.data);
+            const response = await axios.get(`${API_URL}/itineraries`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
         } catch (error) {
             alert('Error fetching itineraries');
         } finally {

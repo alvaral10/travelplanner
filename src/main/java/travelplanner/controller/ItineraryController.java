@@ -38,7 +38,7 @@ public class ItineraryController {
      * @return List of itineraries belonging to the user.
      */
     @GetMapping("/my")
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<List<Itinerary>> getUserItineraries(@AuthenticationPrincipal User user) {
         List<Itinerary> userItineraries = itineraryService.getUserItineraries(user.getId());
         return ResponseEntity.ok(userItineraries);
@@ -51,7 +51,7 @@ public class ItineraryController {
      * @return The created itinerary.
      */
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> createItinerary(@AuthenticationPrincipal User user, @RequestBody @Valid Itinerary itinerary) {
         Itinerary createdItinerary = itineraryService.createItinerary(itinerary, user);
         return ResponseEntity.ok(Map.of("message", "Itinerary created successfully!", "itinerary", createdItinerary));
@@ -80,7 +80,7 @@ public class ItineraryController {
      * @return The updated itinerary.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> updateItinerary(@PathVariable Long id, @RequestBody @Valid Itinerary itineraryDetails, @AuthenticationPrincipal User user) {
         try {
             Itinerary updatedItinerary = itineraryService.updateItinerary(id, itineraryDetails, user);
@@ -97,7 +97,7 @@ public class ItineraryController {
      * @return A success message if deletion is successful.
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> deleteItinerary(@PathVariable Long id, @AuthenticationPrincipal User user) {
         try {
             itineraryService.deleteItinerary(id, user);

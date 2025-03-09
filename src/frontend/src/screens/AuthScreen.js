@@ -8,7 +8,7 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/auth/login';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const AuthScreen = () => {
     const [email, setEmail] = useState('');
@@ -27,7 +27,7 @@ const AuthScreen = () => {
         setError(null);
 
         try {
-            const response = await axios.post(`${API_URL}/login`, {
+            const response = await axios.post(`${API_URL}/auth/login`, {
                 email: email.trim(),
                 password: password.trim(),
             });
