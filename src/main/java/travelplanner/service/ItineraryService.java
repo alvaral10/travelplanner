@@ -6,6 +6,8 @@ import travelplanner.repository.ItineraryRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.List;
 public class ItineraryService {
 
     private final ItineraryRepository itineraryRepository;
+    private static final Logger logger = LoggerFactory.getLogger(ItineraryService.class);
 
     public ItineraryService(ItineraryRepository itineraryRepository) {
         this.itineraryRepository = itineraryRepository;
@@ -43,20 +46,38 @@ public class ItineraryService {
      * @return The created itinerary.
      */
     public Itinerary createItinerary(Itinerary itinerary, User user) {
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: User not authenticated");
+        }
+
+        logger.info("Creating itinerary for user: {}", user.getEmail());
+
         itinerary.setUser(user);
         itinerary.setCreatedAt(LocalDateTime.now());
         itinerary.setUpdatedAt(LocalDateTime.now());
-        return itineraryRepository.save(itinerary);
+
+        Itinerary savedItinerary = itineraryRepository.save(itinerary);
+        logger.info("Itinerary created successfully: {}", savedItinerary.getId());
+
+        return savedItinerary;
     }
 
     /**
-     * Retrieves an itinerary by ID.
+     * Retrieves an itinerary by ID, ensuring the user owns it.
      * @param id The itinerary ID.
+     * @param user The authenticated user.
      * @return The itinerary if found.
      */
-    public Itinerary getItineraryById(Long id) {
-        return itineraryRepository.findById(id)
+    public Itinerary getItineraryById(Long id, User user) {
+        Itinerary itinerary = itineraryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found!"));
+
+        // Ensure user owns the itinerary
+        if (!itinerary.getUser().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to access this itinerary.");
+        }
+
+        return itinerary;
     }
 
     /**
@@ -67,21 +88,23 @@ public class ItineraryService {
      * @return The updated itinerary.
      */
     public Itinerary updateItinerary(Long id, Itinerary itineraryDetails, User user) {
-        Itinerary existingItinerary = getItineraryById(id);
+        Itinerary existingItinerary = getItineraryById(id, user);
 
-        // Ensure the user owns the itinerary
-        if (!existingItinerary.getUser().getId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to update this itinerary.");
-        }
+        logger.info("Updating itinerary {} for user {}", id, user.getEmail());
 
-        existingItinerary.setTitle(itineraryDetails.getTitle());
-        existingItinerary.setDestination(itineraryDetails.getDestination());
-        existingItinerary.setStartDate(itineraryDetails.getStartDate());
-        existingItinerary.setEndDate(itineraryDetails.getEndDate());
-        existingItinerary.setDetails(itineraryDetails.getDetails());
+        // Update fields if they are provided
+        if (itineraryDetails.getTitle() != null) existingItinerary.setTitle(itineraryDetails.getTitle());
+        if (itineraryDetails.getDestination() != null) existingItinerary.setDestination(itineraryDetails.getDestination());
+        if (itineraryDetails.getStartDate() != null) existingItinerary.setStartDate(itineraryDetails.getStartDate());
+        if (itineraryDetails.getEndDate() != null) existingItinerary.setEndDate(itineraryDetails.getEndDate());
+        if (itineraryDetails.getDetails() != null) existingItinerary.setDetails(itineraryDetails.getDetails());
+
         existingItinerary.setUpdatedAt(LocalDateTime.now());
 
-        return itineraryRepository.save(existingItinerary);
+        Itinerary updatedItinerary = itineraryRepository.save(existingItinerary);
+        logger.info("Itinerary updated successfully: {}", updatedItinerary.getId());
+
+        return updatedItinerary;
     }
 
     /**
@@ -90,13 +113,11 @@ public class ItineraryService {
      * @param user The authenticated user.
      */
     public void deleteItinerary(Long id, User user) {
-        Itinerary existingItinerary = getItineraryById(id);
+        Itinerary existingItinerary = getItineraryById(id, user);
 
-        // Ensure the user owns the itinerary
-        if (!existingItinerary.getUser().getId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to delete this itinerary.");
-        }
+        logger.info("Deleting itinerary {} for user {}", id, user.getEmail());
 
         itineraryRepository.delete(existingItinerary);
+        logger.info("Itinerary deleted successfully: {}", id);
     }
 }

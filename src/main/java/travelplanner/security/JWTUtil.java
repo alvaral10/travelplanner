@@ -32,16 +32,16 @@ public class JWTUtil {
     /**
      * Generates a JWT token for the given username with role claims.
      *
-     * @param username The username to include in the token.
-     * @param role The role of the user.
+     * @param email The username to include in the token.
+     * @param role     The role of the user.
      * @return A signed JWT token.
      */
-    public String generateToken(String username, String role) {
+    public String generateToken(String email, String role) {
         return JWT.create()
-                .withSubject(username) // The subject (username)
-                .withClaim("role", role) // Store the user role
-                .withIssuedAt(new Date()) // Issued time
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // Expiry time
+                .withSubject(email)  // ✅ Store email, not username
+                .withClaim("role", role)
+                .withIssuedAt(new Date())
+                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .sign(algorithm);
     }
 
@@ -52,9 +52,9 @@ public class JWTUtil {
      * @return The username if valid.
      */
     public String validateToken(String token) throws JWTVerificationException {
-        JWTVerifier verifier = JWT.require(algorithm)
-                .build();
+        JWTVerifier verifier = JWT.require(algorithm).build();
         DecodedJWT decodedJWT = verifier.verify(token);
-        return decodedJWT.getSubject();
+        return decodedJWT.getSubject();  // ✅ Return email instead of username
     }
 }
+

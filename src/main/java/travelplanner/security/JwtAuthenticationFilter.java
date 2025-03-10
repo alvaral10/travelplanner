@@ -29,31 +29,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        String token = getTokenFromRequest(request);
 
-        try {
-            String token = getTokenFromRequest(request);
-
-            if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                String username = jwtUtil.validateToken(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                String email = jwtUtil.validateToken(token); // ✅ Ensure email is extracted properly
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email); // ✅ Use email here
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (JWTVerificationException e) {
+                LOGGER.log(Level.WARNING, "JWT Verification failed: {0}", e.getMessage());
+                SecurityContextHolder.clearContext();
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Unauthorized: Invalid or expired JWT token");
+                return;
             }
-        } catch (JWTVerificationException e) {
-            LOGGER.log(Level.WARNING, "JWT Verification failed: {0}", e.getMessage());
-            SecurityContextHolder.clearContext();
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Unauthorized: Invalid or expired JWT token");
-            return;
         }
-
-        filterChain.doFilter(request, response);
+        chain.doFilter(request, response);
     }
 
     private String getTokenFromRequest(HttpServletRequest request) {

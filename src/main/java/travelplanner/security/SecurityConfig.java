@@ -68,12 +68,12 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ Allow CORS Requests
                 .csrf(csrf -> csrf.disable()) // ✅ Disable CSRF for APIs
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll() // ✅ Public Routes (Login/Register)
                         .requestMatchers("/admin/**").hasRole("ADMIN") // ✅ Admin-Only Routes
-                        .requestMatchers("/api/itineraries/**").hasRole("USER") // ✅ Authenticated Users
+                        .requestMatchers("/api/itineraries/my").authenticated()
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // ✅ Enforce Stateless Sessions
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -17,6 +17,7 @@ const AuthScreen = () => {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
+    // ✅ Handles user login
     const handleLogin = async () => {
         if (!email.trim() || !password.trim()) {
             setError('Please enter both email and password');
@@ -42,14 +43,25 @@ const AuthScreen = () => {
         }
     };
 
+    // ✅ Handles navigation to register screen
+    const handleRegister = () => {
+        navigate('/register');
+    };
+
     return (
         <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh">
             <Typography variant="h4" gutterBottom>Login</Typography>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} fullWidth sx={{ mb: 2 }} />
             <TextField label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} fullWidth sx={{ mb: 2 }} />
-            <Button variant="contained" color="primary" onClick={handleLogin} disabled={loading} sx={{ width: '100%', padding: '12px' }}>
+
+            <Button variant="contained" color="primary" onClick={handleLogin} disabled={loading} sx={{ width: '100%', padding: '12px', mb: 2 }}>
                 {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Login'}
+            </Button>
+
+            {/* ✅ Register Button */}
+            <Button variant="outlined" color="secondary" onClick={handleRegister} sx={{ width: '100%', padding: '12px' }}>
+                Register
             </Button>
         </Box>
     );

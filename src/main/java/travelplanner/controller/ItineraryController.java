@@ -9,12 +9,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/itineraries")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}) // Support frontend access
 public class ItineraryController {
 
     private final ItineraryService itineraryService;
@@ -38,8 +38,11 @@ public class ItineraryController {
      * @return List of itineraries belonging to the user.
      */
     @GetMapping("/my")
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<List<Itinerary>> getUserItineraries(@AuthenticationPrincipal User user) {
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<?> getUserItineraries(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized: User not authenticated"));
+        }
         List<Itinerary> userItineraries = itineraryService.getUserItineraries(user.getId());
         return ResponseEntity.ok(userItineraries);
     }
@@ -52,9 +55,17 @@ public class ItineraryController {
      */
     @PostMapping
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> createItinerary(@AuthenticationPrincipal User user, @RequestBody @Valid Itinerary itinerary) {
-        Itinerary createdItinerary = itineraryService.createItinerary(itinerary, user);
-        return ResponseEntity.ok(Map.of("message", "Itinerary created successfully!", "itinerary", createdItinerary));
+    public ResponseEntity<?> createItinerary(@AuthenticationPrincipal User user,
+                                             @RequestBody @Valid Itinerary itinerary) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized: User not authenticated"));
+        }
+        try {
+            Itinerary createdItinerary = itineraryService.createItinerary(itinerary, user);
+            return ResponseEntity.ok(Map.of("message", "Itinerary created successfully!", "itinerary", createdItinerary));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
@@ -63,9 +74,13 @@ public class ItineraryController {
      * @return The itinerary if found.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getItineraryById(@PathVariable Long id) {
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<?> getItineraryById(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized: User not authenticated"));
+        }
         try {
-            Itinerary itinerary = itineraryService.getItineraryById(id);
+            Itinerary itinerary = itineraryService.getItineraryById(id, user);
             return ResponseEntity.ok(itinerary);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -81,7 +96,12 @@ public class ItineraryController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> updateItinerary(@PathVariable Long id, @RequestBody @Valid Itinerary itineraryDetails, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> updateItinerary(@PathVariable Long id,
+                                             @RequestBody @Valid Itinerary itineraryDetails,
+                                             @AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized: User not authenticated"));
+        }
         try {
             Itinerary updatedItinerary = itineraryService.updateItinerary(id, itineraryDetails, user);
             return ResponseEntity.ok(Map.of("message", "Itinerary updated successfully!", "itinerary", updatedItinerary));
@@ -99,6 +119,9 @@ public class ItineraryController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> deleteItinerary(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized: User not authenticated"));
+        }
         try {
             itineraryService.deleteItinerary(id, user);
             return ResponseEntity.ok(Map.of("message", "Itinerary deleted successfully!"));
