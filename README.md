@@ -62,6 +62,14 @@ The React app should be running at http://localhost:3000
 | `POST` | `/api/auth/login` | Log in and receive JWT token |
 | `GET`  | `/api/auth/verify?email=test@example.com` | Verify email |
 
+
+## Backend Expectations (Assumed)
+GET /api/profile → returns { profilePicture, interests, aboutMe }
+
+PUT /api/profile → accepts { interests, aboutMe }
+
+POST /api/profile/upload-picture → returns { profilePictureUrl } after receiving FormData
+
 ## Itineraries
 | Method | Endpoint | Description |
 |--------|---------|-------------|
