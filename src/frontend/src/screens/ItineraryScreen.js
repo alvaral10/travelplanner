@@ -1,23 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import {
-    Box, Typography, Button, CircularProgress, List, ListItem,
-    ListItemText, IconButton, TextField, Dialog, DialogTitle, DialogContent,
-    DialogActions, Snackbar, Alert
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+// ... all imports remain the same
 
 const ItineraryScreen = () => {
     const [itineraries, setItineraries] = useState([]);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
-    const [formData, setFormData] = useState({ title: '', destination: '', startDate: '', endDate: '', details: '' });
+    const [formData, setFormData] = useState({ destination: '', startDate: '', endDate: '' });
     const [selectedId, setSelectedId] = useState(null);
+    const [suggestions, setSuggestions] = useState({ hotels: [], attractions: [], restaurants: [] });
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const navigate = useNavigate();
@@ -26,13 +16,18 @@ const ItineraryScreen = () => {
         fetchItineraries();
     }, []);
 
-    // ✅ Fetch itineraries for the logged-in user
+    useEffect(() => {
+        if (formData.destination) {
+            fetchSuggestions(formData.destination);
+        } else {
+            setSuggestions({ hotels: [], attractions: [], restaurants: [] });
+        }
+    }, [formData.destination]);
+
     const fetchItineraries = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            console.log("DEBUG: Retrieved token →", token); // ✅ Log token before sending request
-
             if (!token) {
                 setErrorMessage('User not authenticated. Please login.');
                 return;
@@ -41,43 +36,49 @@ const ItineraryScreen = () => {
             const response = await axios.get(`${API_URL}/itineraries/my`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-
-            console.log("DEBUG: API response →", response.data); // ✅ Log API response
             setItineraries(response.data);
         } catch (error) {
-            console.error("DEBUG: Error fetching itineraries →", error.response);
             setErrorMessage(error.response?.data?.error || 'Error fetching itineraries');
         } finally {
             setLoading(false);
         }
     };
 
-    // ✅ Handles input change for form fields
+    const fetchSuggestions = async (destination) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${API_URL}/suggestions/${destination}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSuggestions(response.data);
+        } catch (error) {
+            console.error("Suggestion fetch failed", error);
+            setSuggestions({ hotels: [], attractions: [], restaurants: [] });
+        }
+    };
+
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // ✅ Opens the modal for adding/editing itinerary
     const handleOpen = (itinerary = null) => {
         if (itinerary) {
             setEditMode(true);
             setSelectedId(itinerary.id);
             setFormData({
-                title: itinerary.title,
                 destination: itinerary.destination,
                 startDate: itinerary.startDate,
-                endDate: itinerary.endDate,
-                details: itinerary.details || ''
+                endDate: itinerary.endDate
             });
         } else {
             setEditMode(false);
             setSelectedId(null);
-            setFormData({ title: '', destination: '', startDate: '', endDate: '', details: '' });
+            setFormData({ destination: '', startDate: '', endDate: '' });
+            setSuggestions({ hotels: [], attractions: [], restaurants: [] });
         }
         setOpen(true);
     };
 
-    // ✅ Handles form submission for adding/updating itinerary
     const handleSubmit = async () => {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -85,7 +86,7 @@ const ItineraryScreen = () => {
             return;
         }
 
-        if (!formData.title || !formData.destination || !formData.startDate || !formData.endDate) {
+        if (!formData.destination || !formData.startDate || !formData.endDate) {
             setErrorMessage('All required fields must be filled');
             return;
         }
@@ -109,16 +110,9 @@ const ItineraryScreen = () => {
         }
     };
 
-    // ✅ Deletes an itinerary (with confirmation)
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this itinerary?")) return;
-
         const token = localStorage.getItem('token');
-        if (!token) {
-            setErrorMessage('User not authenticated. Please login.');
-            return;
-        }
-
         try {
             await axios.delete(`${API_URL}/itineraries/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -130,7 +124,6 @@ const ItineraryScreen = () => {
         }
     };
 
-    // ✅ Logout function
     const handleLogout = () => {
         localStorage.removeItem('token');
         alert('Logged out successfully');
@@ -167,8 +160,8 @@ const ItineraryScreen = () => {
                             </>
                         }>
                             <ListItemText
-                                primary={item.title}
-                                secondary={`Destination: ${item.destination}, Dates: ${item.startDate} - ${item.endDate}`}
+                                primary={`Trip to ${item.destination}`}
+                                secondary={`Dates: ${item.startDate} - ${item.endDate}`}
                             />
                         </ListItem>
                     )) : <Typography>No itineraries found.</Typography>}
@@ -179,11 +172,24 @@ const ItineraryScreen = () => {
             <Dialog open={open} onClose={() => setOpen(false)}>
                 <DialogTitle>{editMode ? "Edit Itinerary" : "Add Itinerary"}</DialogTitle>
                 <DialogContent>
-                    <TextField label="Title" name="title" value={formData.title} onChange={handleInputChange} fullWidth margin="dense" required />
                     <TextField label="Destination" name="destination" value={formData.destination} onChange={handleInputChange} fullWidth margin="dense" required />
                     <TextField label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleInputChange} fullWidth margin="dense" InputLabelProps={{ shrink: true }} required />
                     <TextField label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleInputChange} fullWidth margin="dense" InputLabelProps={{ shrink: true }} required />
-                    <TextField label="Details" name="details" value={formData.details} onChange={handleInputChange} fullWidth margin="dense" multiline rows={3} />
+
+                    {/* Suggestions Box */}
+                    {formData.destination && (
+                        <>
+                            <Typography variant="subtitle1" sx={{ mt: 2 }}>Suggestions for {formData.destination}:</Typography>
+                            <Typography variant="body2" sx={{ mt: 1 }}>🏨 Hotels:</Typography>
+                            <List dense>{suggestions.hotels.map((h, idx) => <ListItem key={idx}><ListItemText primary={h} /></ListItem>)}</List>
+
+                            <Typography variant="body2">🎡 Attractions:</Typography>
+                            <List dense>{suggestions.attractions.map((a, idx) => <ListItem key={idx}><ListItemText primary={a} /></ListItem>)}</List>
+
+                            <Typography variant="body2">🍽️ Restaurants:</Typography>
+                            <List dense>{suggestions.restaurants.map((r, idx) => <ListItem key={idx}><ListItemText primary={r} /></ListItem>)}</List>
+                        </>
+                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpen(false)} color="secondary">Cancel</Button>
