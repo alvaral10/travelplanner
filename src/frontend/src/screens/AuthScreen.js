@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase'; // 👈 Make sure this path matches your firebase.js
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const AuthScreen = () => {
     const [email, setEmail] = useState('');
@@ -17,7 +16,6 @@ const AuthScreen = () => {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
-    // ✅ Handles user login
     const handleLogin = async () => {
         if (!email.trim() || !password.trim()) {
             setError('Please enter both email and password');
@@ -28,22 +26,22 @@ const AuthScreen = () => {
         setError(null);
 
         try {
-            const response = await axios.post(`${API_URL}/auth/login`, {
-                email: email.trim(),
-                password: password.trim(),
-            });
+            const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password.trim());
+            const token = await userCredential.user.getIdToken();
 
-            localStorage.setItem('token', response.data.token);
+            // ✅ Store the Firebase token in localStorage
+            localStorage.setItem('token', token);
+
             alert('Login successful!');
-            navigate('/itinerary'); // Redirect after login
+            navigate('/itinerary');
         } catch (error) {
-            setError(error.response?.data?.message || 'Invalid credentials');
+            console.error('Firebase Login Error:', error);
+            setError(error.message || 'Login failed');
         } finally {
             setLoading(false);
         }
     };
 
-    // ✅ Handles navigation to register screen
     const handleRegister = () => {
         navigate('/register');
     };
@@ -59,7 +57,6 @@ const AuthScreen = () => {
                 {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Login'}
             </Button>
 
-            {/* ✅ Register Button */}
             <Button variant="outlined" color="secondary" onClick={handleRegister} sx={{ width: '100%', padding: '12px' }}>
                 Register
             </Button>

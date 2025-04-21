@@ -2,7 +2,7 @@ package travelplanner.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy; // ✅ Prevent Circular Dependency
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -23,34 +23,23 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JWTUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
-    // ✅ Use @Lazy to Prevent Circular Dependency
-    public SecurityConfig(JWTUtil jwtUtil, @Lazy CustomUserDetailsService userDetailsService) {
-        this.jwtUtil = jwtUtil;
+    public SecurityConfig(@Lazy CustomUserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
     }
 
-    /**
-     * Registers JWT Authentication Filter as a Bean.
-     */
+    // ✅ Replace JwtAuthenticationFilter with FirebaseAuthenticationFilter
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtUtil, userDetailsService);
+    public FirebaseAuthenticationFilter firebaseAuthenticationFilter() {
+        return new FirebaseAuthenticationFilter(userDetailsService);
     }
 
-    /**
-     * Configures password encoding mechanism.
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Configures authentication manager using DAO authentication provider.
-     */
     @Bean
     public AuthenticationManager authenticationManager() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -59,37 +48,31 @@ public class SecurityConfig {
         return new ProviderManager(authProvider);
     }
 
-    /**
-     * Configures security rules and applies JWT authentication.
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ Allow CORS Requests
-                .csrf(csrf -> csrf.disable()) // ✅ Disable CSRF for APIs
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // ✅ Public Routes (Login/Register)
-                        .requestMatchers("/admin/**").hasRole("ADMIN") // ✅ Admin-Only Routes
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/itineraries/my").authenticated()
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // ✅ Enforce Stateless Sessions
-                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(firebaseAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * Configures CORS policy to allow frontend requests.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // ✅ Change this if deploying
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000")); // Update as needed
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }
